@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0a0a">
+<title>KickNoSub</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #53fc18; --green-dim: rgba(83,252,24,0.12);
+    --bg: #0a0a0a; --bg2: #111; --bg3: #1a1a1a;
+    --border: rgba(255,255,255,0.08); --text: #e8e8e8; --dim: #888;
+  }
+  html, body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100dvh; overflow-x: hidden; }
+
+  #home { min-height: 100dvh; display: flex; flex-direction: column; padding: 0 20px 40px; animation: fadeUp 0.35s ease; }
+  .hero { padding: 44px 0 28px; }
+  .hero-badge { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--green); letter-spacing: 3px; text-transform: uppercase; opacity: 0.8; margin-bottom: 6px; }
+  .hero-title { font-size: 40px; font-weight: 800; line-height: 1; letter-spacing: -1px; }
+  .hero-title span { color: var(--green); }
+  .hero-sub { font-size: 13px; color: var(--dim); margin-top: 6px; }
+
+  .input-row { display: flex; gap: 10px; margin-top: 4px; }
+  .input-wrap { position: relative; flex: 1; }
+  .input-wrap input { width: 100%; background: var(--bg2); border: 1.5px solid var(--border); border-radius: 12px; padding: 15px 44px 15px 16px; font-family: 'DM Mono', monospace; font-size: 14px; color: var(--text); outline: none; transition: border-color 0.2s, box-shadow 0.2s; caret-color: var(--green); }
+  .input-wrap input::placeholder { color: var(--dim); }
+  .input-wrap input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-dim); }
+  .input-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--dim); cursor: pointer; font-size: 20px; display: none; padding: 4px; line-height: 1; }
+  .input-wrap input:not(:placeholder-shown) + .input-clear { display: block; }
+
+  #btn-search { padding: 0 20px; background: var(--green); color: #000; font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; border: none; border-radius: 12px; cursor: pointer; white-space: nowrap; transition: opacity 0.15s, transform 0.1s; flex-shrink: 0; }
+  #btn-search:active { opacity: 0.85; transform: scale(0.97); }
+
+  .status-bar { margin-top: 12px; padding: 11px 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--dim); display: none; align-items: center; gap: 8px; min-height: 40px; }
+  .status-bar.show { display: flex; }
+  .status-bar.error { color: #ff5555; border-color: rgba(255,85,85,0.3); }
+  .spinner-sm { width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.1); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+
+  #vod-section { margin-top: 24px; flex: 1; }
+  .channel-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .channel-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); flex-shrink: 0; background: var(--bg3); }
+  .channel-name { font-size: 18px; font-weight: 700; }
+  .channel-sub { font-size: 11px; color: var(--dim); font-family: 'DM Mono', monospace; margin-top: 2px; }
+
+  .vod-grid { display: flex; flex-direction: column; gap: 10px; }
+  .vod-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; display: flex; transition: border-color 0.15s; -webkit-tap-highlight-color: transparent; }
+  .vod-card:active { border-color: rgba(83,252,24,0.35); background: var(--bg3); }
+  .vod-thumb { width: 120px; flex-shrink: 0; aspect-ratio: 16/9; object-fit: cover; background: var(--bg3); display: block; }
+  .vod-info { padding: 10px 12px; flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+  .vod-title { font-size: 13px; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .vod-meta { font-size: 11px; color: var(--dim); font-family: 'DM Mono', monospace; }
+  .vod-dur { display: inline-block; background: rgba(0,0,0,0.7); color: #fff; font-family: 'DM Mono', monospace; font-size: 10px; padding: 2px 5px; border-radius: 4px; margin-top: 2px; align-self: flex-start; }
+
+  .section-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); margin: 26px 0 10px; }
+  .history-list { display: flex; flex-direction: column; gap: 7px; }
+  .history-item { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 11px 13px; display: flex; align-items: center; gap: 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: border-color 0.15s; }
+  .history-item:active { border-color: rgba(83,252,24,0.3); }
+  .history-info { flex: 1; min-width: 0; }
+  .history-ch { font-size: 14px; font-weight: 600; }
+  .history-meta { font-size: 11px; color: var(--dim); font-family: 'DM Mono', monospace; margin-top: 1px; }
+  .history-del { background: none; border: none; color: var(--dim); font-size: 18px; cursor: pointer; padding: 4px; flex-shrink: 0; }
+  .empty-state { text-align: center; padding: 28px 0; color: var(--dim); font-size: 13px; display: none; }
+  .empty-state.show { display: block; }
+  .empty-icon { font-size: 30px; margin-bottom: 6px; opacity: 0.4; }
+
+  /* DISCOVERY */
+  #discovery-screen { display: none; flex-direction: column; min-height: 100dvh; align-items: center; justify-content: center; gap: 18px; padding: 32px 24px; text-align: center; }
+  #discovery-screen.show { display: flex; }
+  .disc-spin { width: 60px; height: 60px; border: 3px solid rgba(255,255,255,0.08); border-top-color: var(--green); border-radius: 50%; animation: spin 0.9s linear infinite; }
+  .disc-title { font-size: 20px; font-weight: 700; }
+  .disc-msg { font-size: 12px; color: var(--dim); font-family: 'DM Mono', monospace; line-height: 1.6; max-width: 280px; }
+  #disc-prog { font-size: 12px; color: var(--green); font-family: 'DM Mono', monospace; }
+
+  /* PLAYER */
+  #player-screen { display: none; flex-direction: column; min-height: 100dvh; background: #000; }
+  #player-screen.show { display: flex; }
+  #k-player { width: 100%; position: relative; background: #000; flex-shrink: 0; }
+  #k-video { width: 100%; display: block; object-fit: contain; background: #000; }
+
+  /* Fullscreen: player container fills entire screen */
+  #k-player:-webkit-full-screen { width: 100vw !important; height: 100vh !important; }
+  #k-player:-moz-full-screen    { width: 100vw !important; height: 100vh !important; }
+  #k-player:fullscreen           { width: 100vw !important; height: 100vh !important; }
+
+  /* Fullscreen: video fills the player */
+  #k-player:-webkit-full-screen #k-video { width: 100% !important; height: 100% !important; object-fit: contain; }
+  #k-player:-moz-full-screen    #k-video { width: 100% !important; height: 100% !important; object-fit: contain; }
+  #k-player:fullscreen           #k-video { width: 100% !important; height: 100% !important; object-fit: contain; }
+
+  /* Fullscreen: fix overlay positioning */
+  #k-player:-webkit-full-screen #k-controls,
+  #k-player:-moz-full-screen    #k-controls,
+  #k-player:fullscreen           #k-controls { position: absolute; bottom: 0; left: 0; right: 0; }
+
+  #k-player:-webkit-full-screen .player-header,
+  #k-player:-moz-full-screen    .player-header,
+  #k-player:fullscreen           .player-header { position: absolute; top: 0; left: 0; right: 0; }
+
+  #k-player:-webkit-full-screen #k-big-play,
+  #k-player:-moz-full-screen    #k-big-play,
+  #k-player:fullscreen           #k-big-play { position: absolute; }
+
+  .player-header { padding: 10px 14px 6px; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); position: absolute; top: 0; left: 0; right: 0; z-index: 20; display: flex; align-items: center; gap: 10px; transition: opacity 0.3s; }
+  #btn-back { background: rgba(255,255,255,0.1); border: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #fff; flex-shrink: 0; }
+  .ph-info { flex: 1; min-width: 0; }
+  .ph-channel { font-size: 11px; color: var(--green); font-family: 'DM Mono', monospace; }
+  .ph-title { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  #k-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  #k-loading.visible { opacity: 1; }
+  .k-spin { width: 42px; height: 42px; border: 3px solid rgba(255,255,255,0.12); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; }
+
+  #k-big-play { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 62px; height: 62px; background: rgba(0,0,0,0.7); border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; cursor: pointer; color: #fff; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  #k-big-play.visible { opacity: 1; pointer-events: auto; }
+  #k-big-play:active { transform: translate(-50%,-50%) scale(0.91); }
+
+  .seek-zone { position: absolute; top: 0; bottom: 0; width: 35%; z-index: 5; -webkit-tap-highlight-color: transparent; cursor: pointer; }
+  #seek-left { left: 0; } #seek-right { right: 0; }
+
+  #k-seek-ind { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.55); border-radius: 50%; width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1px; color: #fff; font-family: 'DM Mono', monospace; font-size: 13px; pointer-events: none; opacity: 0; transition: opacity 0.25s; z-index: 10; }
+  #k-seek-ind.visible { opacity: 1; }
+  #k-seek-ind.lft { left: 16%; } #k-seek-ind.rgt { left: 64%; }
+
+  #k-controls { position: absolute; bottom: 0; left: 0; right: 0; padding: 36px 13px 10px; background: linear-gradient(to top, rgba(0,0,0,0.95), transparent); opacity: 0; transition: opacity 0.25s; z-index: 15; }
+  #k-controls.show { opacity: 1; }
+
+  #k-track { width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; cursor: pointer; margin-bottom: 9px; position: relative; touch-action: none; }
+  #k-progress { height: 100%; background: var(--green); border-radius: 2px; position: relative; pointer-events: none; width: 0%; }
+  #k-progress::after { content: ''; position: absolute; right: -5px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; background: #fff; border-radius: 50%; box-shadow: 0 0 5px rgba(83,252,24,0.5); }
+
+  .ctrl-row { display: flex; align-items: center; justify-content: space-between; }
+  .ctrl-l, .ctrl-r { display: flex; align-items: center; gap: 2px; }
+  .cb { background: none; border: none; color: #fff; cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+  .cb:active { opacity: 0.65; }
+  #k-time { font-family: 'DM Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.8); white-space: nowrap; padding: 0 4px; }
+
+  #k-vol-sl { -webkit-appearance: none; width: 68px; height: 3px; background: rgba(255,255,255,0.25); border-radius: 2px; outline: none; cursor: pointer; }
+  #k-vol-sl::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; background: #fff; border-radius: 50%; }
+  @media (max-width: 380px) {
+    #k-vol-sl { width: 44px; }
+    .ctrl-l, .ctrl-r { gap: 0; }
+    .cb { padding: 6px; }
+  }
+
+  #k-speed-wrap { position: static; }
+  #k-speed-btn { background: rgba(255,255,255,0.1); border: none; color: #fff; font-family: 'DM Mono', monospace; font-size: 11px; padding: 5px 8px; border-radius: 6px; cursor: pointer; }
+  #k-speed-menu { position: fixed; background: #1a1a1a; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; display: none; min-width: 90px; box-shadow: 0 8px 28px rgba(0,0,0,0.85); z-index: 9999; }
+  #k-speed-wrap.open #k-speed-menu { display: block; }
+  .kso { display: block; width: 100%; padding: 14px 16px; background: none; border: none; border-bottom: 1px solid var(--border); color: var(--dim); font-family: 'DM Mono', monospace; font-size: 13px; text-align: left; cursor: pointer; }
+  .kso:last-child { border-bottom: none; }
+  .kso.active { color: var(--green); }
+  .kso:active { background: #222; }
+
+  #k-qual-wrap { position: static; }
+  #k-qual-btn { background: rgba(255,255,255,0.1); border: none; color: #fff; font-family: 'DM Mono', monospace; font-size: 11px; padding: 5px 8px; border-radius: 6px; cursor: pointer; }
+  #k-qual-menu { position: fixed; background: #1a1a1a; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; display: none; min-width: 110px; box-shadow: 0 8px 28px rgba(0,0,0,0.85); z-index: 9999; }
+  #k-qual-wrap.open #k-qual-menu { display: block; }
+  .kqo { display: block; width: 100%; padding: 14px 16px; background: none; border: none; border-bottom: 1px solid var(--border); color: var(--dim); font-family: 'DM Mono', monospace; font-size: 13px; text-align: left; cursor: pointer; }
+  .kqo:last-child { border-bottom: none; }
+  .kqo.active { color: var(--green); }
+  .kqo:active { background: #222; }
+
+  #load-more-btn { display: none; width: 100%; margin-top: 14px; padding: 14px; background: var(--bg2); border: 1.5px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: border-color 0.15s; }
+  #load-more-btn:active { border-color: rgba(83,252,24,0.4); }
+  #load-more-btn.show { display: block; }
+  #load-more-btn.loading { color: var(--dim); }
+
+  .video-info { padding: 14px 16px; background: var(--bg); flex: 1; }
+  .vi-title { font-size: 15px; font-weight: 700; line-height: 1.3; margin-bottom: 4px; }
+  .vi-meta { font-size: 11px; color: var(--dim); font-family: 'DM Mono', monospace; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="home">
+  <div class="hero">
+    <div class="hero-badge">● Kick VOD Player</div>
+    <div class="hero-title">Kick<span>NoSub</span></div>
+    <div class="hero-sub">Kanal adını yaz, VOD'u seç, izle</div>
+  </div>
+
+  <div class="input-row">
+    <div class="input-wrap">
+      <input type="text" id="ch-input" placeholder="xqc, kanal_adı…" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+      <button class="input-clear" onclick="document.getElementById('ch-input').value='';document.getElementById('ch-input').focus()">×</button>
+    </div>
+    <button id="btn-search" onclick="searchChannel()">Ara</button>
+  </div>
+  <div class="status-bar" id="status-bar">
+    <div class="spinner-sm" id="s-spin"></div>
+    <span id="s-text"></span>
+  </div>
+
+  <div id="vod-section" style="display:none">
+    <div class="channel-header">
+      <img class="channel-avatar" id="ch-avatar" src="" alt="">
+      <div>
+        <div class="channel-name" id="ch-name-disp"></div>
+        <div class="channel-sub" id="ch-sub"></div>
+      </div>
+    </div>
+    <div class="vod-grid" id="vod-grid"></div>
+    <button id="load-more-btn">Daha fazla yükle</button>
+  </div>
+
+  <div id="hist-wrap">
+    <div class="section-label">Son kanallar</div>
+    <div class="history-list" id="history-list"></div>
+    <div class="empty-state" id="empty-state"><div class="empty-icon">📺</div><div>Henüz kanal arama geçmişin yok</div></div>
+  </div>
+</div>
+
+<!-- DISCOVERY -->
+<div id="discovery-screen">
+  <div class="disc-spin"></div>
+  <div class="disc-title">🔓 Stream aranıyor</div>
+  <div class="disc-msg" id="disc-msg">Hazırlanıyor…</div>
+  <div id="disc-prog"></div>
+</div>
+
+<!-- PLAYER -->
+<div id="player-screen">
+  <div id="k-player">
+    <video id="k-video" playsinline webkit-playsinline></video>
+    <div class="player-header" id="player-header">
+      <button id="btn-back" onclick="goBack()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+      </button>
+      <div class="ph-info">
+        <div class="ph-channel" id="ph-ch"></div>
+        <div class="ph-title" id="ph-title"></div>
+      </div>
+    </div>
+    <div class="seek-zone" id="seek-left"></div>
+    <div class="seek-zone" id="seek-right"></div>
+    <div id="k-seek-ind"></div>
+    <div id="k-loading"><div class="k-spin"></div></div>
+    <button id="k-big-play">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="white"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <div id="k-controls">
+      <div id="k-track"><div id="k-progress"></div></div>
+      <div class="ctrl-row">
+        <div class="ctrl-l">
+          <button class="cb" id="k-seek-back-btn" title="-10s">
+            <svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="12" y="15.5" text-anchor="middle" font-size="5.5" fill="white" font-family="sans-serif" font-weight="bold">10</text></svg>
+          </button>
+          <button class="cb" id="k-play-btn"><svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M8 5v14l11-7z"/></svg></button>
+          <button class="cb" id="k-seek-fwd-btn" title="+10s">
+            <svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/><text x="12" y="15.5" text-anchor="middle" font-size="5.5" fill="white" font-family="sans-serif" font-weight="bold">10</text></svg>
+          </button>
+          <span id="k-time">0:00 / 0:00</span>
+        </div>
+        <div class="ctrl-r">
+          <button class="cb" id="k-vol-btn"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" width="20" height="20"><path fill="none" d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5zM16 9a5 5 0 0 1 0 6m3.4 3.4a9 9 0 0 0 0-12.7"/></svg></button>
+          <input type="range" id="k-vol-sl" min="0" max="1" step="0.05" value="1">
+          <div id="k-speed-wrap">
+            <button id="k-speed-btn">1x ▲</button>
+            <div id="k-speed-menu"></div>
+          </div>
+          <div id="k-qual-wrap">
+            <button id="k-qual-btn">Auto ▲</button>
+            <div id="k-qual-menu"></div>
+          </div>
+          <button class="cb" id="k-fs-btn"><svg viewBox="0 0 24 24" fill="white" width="20" height="20"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="video-info">
+    <div class="vi-title" id="vi-title"></div>
+    <div class="vi-meta" id="vi-meta"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const home=$('home'), discScreen=$('discovery-screen'), playerScreen=$('player-screen');
+const vid=$('k-video'), controls=$('k-controls'), playerHeader=$('player-header');
+const progress=$('k-progress'), track=$('k-track'), timeDisp=$('k-time');
+const kLoading=$('k-loading'), seekInd=$('k-seek-ind');
+const btnPlayBtn=$('k-play-btn'), btnBig=$('k-big-play');
+const volSl=$('k-vol-sl'), qualWrap=$('k-qual-wrap'), qualBtn=$('k-qual-btn'), qualMenu=$('k-qual-menu');
+const speedWrap=$('k-speed-wrap'), speedBtn=$('k-speed-btn'), speedMenu=$('k-speed-menu');
+
+let activeHls=null, ctrlTimer=null, hasStarted=false, prevVol=1;
+let lastTap=0, lastTapSide=null;
+let currentChannelSlug='', currentChannelData=null, currentPage=1;
+let currentResumeKey='', lastSave=0;
+const PAGE_SIZE=10;
+
+const BASES=[
+  "https://stream.kick.com/ivs/v1/196233775518",
+  "https://stream.kick.com/3c81249a5ce0/ivs/v1/196233775518",
+  "https://stream.kick.com/0f3cb0ebce7/ivs/v1/196233775518"
+];
+
+// ── HISTORY ──────────────────────────────────────────────────────────────────
+function getHistory(){try{return JSON.parse(localStorage.getItem('kns_ch')||'[]')}catch{return[]}}
+function saveHistory(h){localStorage.setItem('kns_ch',JSON.stringify(h.slice(0,10)))}
+function addChannelToHistory(slug,displayName,avatar){
+  let h=getHistory().filter(x=>x.slug!==slug.toLowerCase());
+  h.unshift({slug:slug.toLowerCase(),displayName,avatar,ts:Date.now()});
+  saveHistory(h);renderHistory();
+}
+function renderHistory(){
+  const list=$('history-list'),empty=$('empty-state'),h=getHistory();
+  list.innerHTML='';
+  if(!h.length){empty.classList.add('show');return}
+  empty.classList.remove('show');
+  h.forEach(item=>{
+    const el=document.createElement('div');
+    el.className='history-item';
+    el.innerHTML=`
+      <div class="history-info">
+        <div class="history-ch">${esc(item.displayName||item.slug)}</div>
+        <div class="history-meta">${fmtDate(item.ts)}</div>
+      </div>
+      <button class="history-del">×</button>`;
+    el.querySelector('.history-del').addEventListener('click',e=>{e.stopPropagation();saveHistory(getHistory().filter(x=>x.slug!==item.slug));renderHistory();});
+    el.addEventListener('click',e=>{if(e.target.closest('.history-del'))return;$('ch-input').value=item.slug;searchChannel();});
+    list.appendChild(el);
+  });
+}
+
+// ── UTILS ──────────────────────────────────────────────────────────────────────
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function fmtDate(ts){return new Date(ts).toLocaleDateString('tr-TR',{day:'numeric',month:'short'})}
+function fmtTime(s){
+  if(!isFinite(s)||s<0)return'0:00';
+  const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.floor(s%60);
+  return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`:`${m}:${String(sec).padStart(2,'0')}`;
+}
+function fmtVodDate(str){if(!str)return'';return new Date(str).toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'});}
+
+function showScreen(name){
+  home.style.display=name==='home'?'':'none';
+  discScreen.className=name==='discovery'?'show':'';
+  playerScreen.className=name==='player'?'show':'';
+  // Close any open menus when leaving player
+  if(name!=='player'){
+    qualWrap.classList.remove('open');
+    speedWrap.classList.remove('open');
+  }
+}
+function setStatus(msg,type=''){
+  const bar=$('status-bar');
+  bar.className='status-bar show'+(type?' '+type:'');
+  $('s-text').textContent=msg;
+  $('s-spin').style.display=type==='loading'?'':'none';
+}
+function hideStatus(){$('status-bar').className='status-bar';}
+
+// ── CHANNEL SEARCH ─────────────────────────────────────────────────────────────
+async function searchChannel(){
+  const ch=$('ch-input').value.trim().toLowerCase().replace(/\s+/g,'');
+  if(!ch){setStatus('Kanal adı gir','error');return;}
+  hideStatus();
+  $('vod-section').style.display='none';
+  $('hist-wrap').style.display='none';
+  setStatus('Kanal aranıyor…','loading');
+  try{
+    const res=await fetch(`https://kick.com/api/v1/channels/${ch}`);
+    if(!res.ok){setStatus(`"${ch}" kanalı bulunamadı`,'error');$('hist-wrap').style.display='';return;}
+    const data=await res.json();
+    hideStatus();
+    renderVodList(ch,data);
+    addChannelToHistory(ch,data.user?.username||ch,data.user?.profile_pic||'');
+  }catch(e){
+    setStatus('Bağlantı hatası: '+e.message,'error');
+    $('hist-wrap').style.display='';
+  }
+}
+
+function renderVodList(slug,data,append=false){
+  const vods=data.previous_livestreams||[];
+  currentChannelSlug=slug;
+  currentChannelData=data;
+
+  if(!append){
+    currentPage=1;
+    $('ch-avatar').src=data.user?.profile_pic||'';
+    $('ch-name-disp').textContent=data.user?.username||slug;
+    $('hist-wrap').style.display='none';
+    $('vod-grid').innerHTML='';
+  }
+
+  const start=(currentPage-1)*PAGE_SIZE;
+  const pageVods=vods.slice(start,start+PAGE_SIZE);
+  const totalShown=start+pageVods.length;
+
+  $('ch-sub').textContent=`${vods.length} VOD`;
+
+  if(!vods.length){
+    $('vod-grid').innerHTML='<div style="color:var(--dim);font-size:13px;text-align:center;padding:24px 0">Bu kanalda VOD bulunamadı.</div>';
+    $('load-more-btn').classList.remove('show');
+    $('vod-section').style.display='';
+    return;
+  }
+
+  const grid=$('vod-grid');
+  pageVods.forEach(vod=>{
+    const thumb=vod.thumbnail?.src||vod.thumbnail?.url||'';
+    const title=vod.session_title||vod.slug||'VOD';
+    const dur=vod.video?.duration?fmtTime(vod.video.duration):'';
+    const date=fmtVodDate(vod.start_time);
+    const card=document.createElement('div');
+    card.className='vod-card';
+    card.innerHTML=`
+      <img class="vod-thumb" src="${esc(thumb)}" alt="" loading="lazy" onerror="this.style.background='#222'">
+      <div class="vod-info">
+        <div class="vod-title">${esc(title)}</div>
+        <div class="vod-meta">${date}</div>
+        ${dur?`<div class="vod-dur">${dur}</div>`:''}
+      </div>`;
+    card.addEventListener('click',()=>startVideo(slug,vod,data.id));
+    grid.appendChild(card);
+  });
+
+  const btn=$('load-more-btn');
+  if(totalShown<vods.length){
+    btn.classList.add('show');
+    btn.classList.remove('loading');
+    btn.textContent=`Daha fazla yükle (${vods.length-totalShown} kaldı)`;
+  } else {
+    btn.classList.remove('show');
+  }
+
+  $('vod-section').style.display='';
+}
+
+// ── VIDEO LOAD ─────────────────────────────────────────────────────────────────
+async function startVideo(channelSlug,vod,channelId){
+  const videoSlug=vod.slug||vod.video?.uuid||String(vod.id);
+  showScreen('discovery');
+  $('disc-msg').textContent='Stream URL\'leri test ediliyor…';
+  $('disc-prog').textContent='';
+
+  const candidates=buildCandidates({video:vod,channelId:String(channelId)});
+  let found=null,tried=0;
+  for(const url of candidates){
+    tried++;
+    $('disc-prog').textContent=`${tried} / ${candidates.length}`;
+    if(await tryUrl(url)){found=url;break;}
+  }
+
+  if(!found){
+    showScreen('home');
+    $('vod-section').style.display='';
+    $('hist-wrap').style.display='none';
+    $('load-more-btn').classList.remove('show');
+    setStatus('Stream bulunamadı. GitHub Pages\'te barındırmayı dene.','error');
+    return;
+  }
+
+  const resumeKey=`kns_r:${channelSlug}:${videoSlug}`;
+  const savedTime=parseFloat(localStorage.getItem(resumeKey))||0;
+  const title=vod.session_title||videoSlug;
+
+  $('ph-ch').textContent=channelSlug;
+  $('ph-title').textContent=title;
+  $('vi-title').textContent=title;
+  $('vi-meta').textContent=`${channelSlug} · ${fmtVodDate(vod.start_time)}`;
+
+  showScreen('player');
+  setupPlayer(found,resumeKey,savedTime);
+}
+
+// ── CANDIDATES ────────────────────────────────────────────────────────────────
+function buildCandidates({video,channelId}){
+  const thumbUrl=video.thumbnail?.src||video.thumbnail?.url||'';
+  const pairs=[];
+  if(thumbUrl){
+    const parts=thumbUrl.split('/');
+    const ivsIdx=parts.indexOf('ivs');
+    if(ivsIdx!==-1&&parts[ivsIdx+1]==='v1')pairs.push({cid:parts[ivsIdx+2],vid:parts[ivsIdx+3]});
+    else if(parts.length>5)pairs.push({cid:parts[4],vid:parts[5]});
+  }
+  if(channelId&&video.video?.uuid)pairs.push({cid:channelId,vid:video.video.uuid});
+  if(channelId&&video.id)pairs.push({cid:channelId,vid:String(video.id)});
+  const unique=pairs.filter((a,i,arr)=>arr.findIndex(b=>b.cid===a.cid&&b.vid===a.vid)===i);
+  const urls=[];
+  if(!video.start_time)return urls;
+  let startStr=video.start_time.replace(' ','T');
+  if(!startStr.endsWith('Z'))startStr+='Z';
+  const t0=new Date(startStr);
+  const offsets=[0,1,-1,2,-2,3,-3,4,-4,5,-5];
+  for(const off of offsets){
+    const t=new Date(t0.getTime()+off*60000);
+    const y=t.getUTCFullYear(),mo=t.getUTCMonth()+1,d=t.getUTCDate(),h=t.getUTCHours(),min=t.getUTCMinutes();
+    for(const p of unique)for(const base of BASES)urls.push(`${base}/${p.cid}/${y}/${mo}/${d}/${h}/${min}/${p.vid}/media/hls/master.m3u8`);
+  }
+  return urls;
+}
+
+function tryUrl(url){
+  return new Promise(resolve=>{
+    if(!Hls.isSupported()){resolve(false);return;}
+    const hls=new Hls({debug:false,enableWorker:true,maxBufferLength:0});
+    const v=document.createElement('video');
+    const t=setTimeout(()=>{hls.destroy();resolve(false);},6000);
+    hls.on(Hls.Events.MANIFEST_PARSED,()=>{clearTimeout(t);hls.destroy();resolve(true);});
+    hls.on(Hls.Events.ERROR,(e,d)=>{if(d.fatal){clearTimeout(t);hls.destroy();resolve(false);}});
+    hls.loadSource(url);hls.attachMedia(v);
+  });
+}
+
+// ── PLAYER ────────────────────────────────────────────────────────────────────
+function setupPlayer(url,resumeKey,savedTime){
+  if(activeHls){activeHls.destroy();activeHls=null;}
+  hasStarted=false;
+  qualMenu.innerHTML='';
+  qualBtn.textContent='Auto ▲';
+
+  const vw=window.innerWidth;
+  $('k-player').style.height=Math.round(vw*9/16)+'px';
+  vid.style.height=Math.round(vw*9/16)+'px';
+
+  currentResumeKey=resumeKey;
+  lastSave=0;
+  vid.playbackRate=1;
+  speedBtn.textContent='1x ▲';
+  speedMenu.querySelectorAll('.kso').forEach(b=>b.classList.toggle('active',b.textContent==='1x'));
+  const finalUrl=url+(url.includes('?')?'&':'?')+'_t='+Date.now();
+
+  if(Hls.isSupported()){
+    const hls=new Hls({
+      debug:false,
+      enableWorker:true,
+      lowLatencyMode:false,
+      autoStartLoad:true,
+      startLevel:-1,              // let ABR pick best level immediately
+      maxBufferLength:60,
+      maxMaxBufferLength:120,
+      maxBufferSize:60*1000*1000,
+      maxBufferHole:0.3,
+      highBufferWatchdogPeriod:2,
+      nudgeMaxRetry:5,
+      startFragPrefetch:true,
+      fragLoadingTimeOut:20000,
+      fragLoadingMaxRetry:6,
+      fragLoadingRetryDelay:500,
+      manifestLoadingTimeOut:10000,
+      manifestLoadingMaxRetry:3,
+      levelLoadingTimeOut:10000,
+      abrEwmaFastVoD:3,
+      abrEwmaSlowVoD:9,
+      abrBandWidthFactor:0.95,
+      abrBandWidthUpFactor:0.7,
+    });
+    activeHls=hls;
+    hls.loadSource(finalUrl);hls.attachMedia(vid);
+    hls.on(Hls.Events.MANIFEST_LOADING,()=>setLoad(true));
+    hls.on(Hls.Events.MANIFEST_PARSED,()=>{
+      setLoad(false);buildQualMenu(hls);
+      vid.playbackRate=1;
+      vid.play().catch(()=>btnBig.classList.add('visible'));
+      if(savedTime>2)vid.addEventListener('loadedmetadata',()=>{vid.currentTime=Math.min(savedTime,vid.duration-2);},{once:true});
+    });
+    hls.on(Hls.Events.ERROR,(e,d)=>{
+      if(d.fatal){setLoad(false);
+        if(d.type===Hls.ErrorTypes.NETWORK_ERROR)hls.startLoad();
+        else if(d.type===Hls.ErrorTypes.MEDIA_ERROR)hls.recoverMediaError();
+        else hls.destroy();
+      }
+    });
+  }else if(vid.canPlayType('application/vnd.apple.mpegurl')){vid.src=finalUrl;vid.load();}
+
+  showCtrl();scheduleHide();
+}
+
+// ── PERSISTENT VIDEO EVENT LISTENERS (registered once) ────────────────────────
+vid.addEventListener('timeupdate',()=>{
+  if(currentResumeKey&&Date.now()-lastSave>4000){localStorage.setItem(currentResumeKey,vid.currentTime);lastSave=Date.now();}
+  if(isFinite(vid.duration)){
+    progress.style.width=(vid.currentTime/vid.duration*100)+'%';
+    timeDisp.textContent=`${fmtTime(vid.currentTime)} / ${fmtTime(vid.duration)}`;
+  }
+});
+vid.addEventListener('ended',()=>{if(currentResumeKey)localStorage.removeItem(currentResumeKey);});
+vid.addEventListener('play',()=>{btnPlayBtn.innerHTML=pauseIco();btnBig.classList.remove('visible');scheduleHide();});
+vid.addEventListener('pause',()=>{btnPlayBtn.innerHTML=playIco();btnBig.classList.add('visible');showCtrl();clearTimeout(ctrlTimer);});
+vid.addEventListener('playing',()=>{hasStarted=true;setLoad(false);});
+vid.addEventListener('waiting',()=>{if(!vid.paused)setLoad(true);});
+vid.addEventListener('stalled',()=>{if(!vid.paused)setLoad(true);});
+vid.addEventListener('canplay',()=>{if(!vid.paused&&hasStarted)setLoad(false);});
+
+function setLoad(on){on?kLoading.classList.add('visible'):kLoading.classList.remove('visible');}
+function showCtrl(){controls.classList.add('show');playerHeader.style.opacity='1';}
+function hideCtrl(){if(!vid.paused)controls.classList.remove('show');playerHeader.style.opacity=vid.paused?'1':'0';}
+function scheduleHide(){clearTimeout(ctrlTimer);if(!vid.paused)ctrlTimer=setTimeout(hideCtrl,3500);}
+function keepCtrl(){clearTimeout(ctrlTimer);showCtrl();}
+
+// Toggle controls on tap of the neutral player area (not buttons/seek zones)
+$('k-player').addEventListener('click',e=>{
+  if(e.target.closest('#seek-left,#seek-right,#k-controls,#player-header,#k-big-play'))return;
+  if(controls.classList.contains('show')){hideCtrl();}else{showCtrl();scheduleHide();}
+});
+
+// Keep controls visible while interacting with any control element
+controls.addEventListener('click',e=>{e.stopPropagation();keepCtrl();scheduleHide();});
+controls.addEventListener('touchstart',()=>keepCtrl(),{passive:true});
+playerHeader.addEventListener('click',e=>e.stopPropagation());
+
+function togglePlay(){
+  if(vid.paused){vid.play();scheduleHide();}
+  else{vid.pause();showCtrl();clearTimeout(ctrlTimer);}
+}
+btnPlayBtn.addEventListener('click',e=>{e.stopPropagation();togglePlay();});
+btnBig.addEventListener('click',e=>{e.stopPropagation();togglePlay();});
+
+$('k-seek-back-btn').addEventListener('click',e=>{
+  e.stopPropagation();
+  vid.currentTime=Math.max(0,vid.currentTime-10);
+  if(activeHls){activeHls.stopLoad();activeHls.startLoad();}
+  seekAnim('lft',10);keepCtrl();scheduleHide();
+});
+$('k-seek-fwd-btn').addEventListener('click',e=>{
+  e.stopPropagation();
+  vid.currentTime=Math.min(vid.currentTime+10,vid.duration||0);
+  if(activeHls){activeHls.stopLoad();activeHls.startLoad();}
+  seekAnim('rgt',10);keepCtrl();scheduleHide();
+});
+
+volSl.addEventListener('input',()=>{const v=parseFloat(volSl.value);vid.volume=v;vid.muted=v===0;if(v>0)prevVol=v;keepCtrl();scheduleHide();});
+$('k-vol-btn').addEventListener('click',e=>{
+  e.stopPropagation();
+  if(vid.muted||vid.volume===0){vid.volume=prevVol||0.8;vid.muted=false;volSl.value=vid.volume;}
+  else{prevVol=vid.volume;vid.muted=true;volSl.value=0;}
+  keepCtrl();scheduleHide();
+});
+
+track.addEventListener('click',e=>{
+  e.stopPropagation();
+  if(!isFinite(vid.duration))return;
+  const r=track.getBoundingClientRect();
+  const newTime=((e.clientX-r.left)/r.width)*vid.duration;
+  vid.currentTime=newTime;
+  if(activeHls){activeHls.stopLoad();activeHls.startLoad();}
+  keepCtrl();scheduleHide();
+});
+let scrubTimer=null;
+track.addEventListener('touchstart',e=>{scrubT(e);keepCtrl();},{passive:true});
+track.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  keepCtrl();
+  // Debounce: only actually seek every 150ms during drag
+  if(scrubTimer)return;
+  scrubTimer=setTimeout(()=>{scrubTimer=null;},150);
+  scrubT(e);
+},{passive:false});
+track.addEventListener('touchend',e=>{
+  scrubTimer=null;
+  scrubTEnd(e);
+  if(activeHls){activeHls.stopLoad();activeHls.startLoad();}
+  scheduleHide();
+},{passive:true});
+function scrubT(e){
+  if(!isFinite(vid.duration)||!e.touches||!e.touches[0])return;
+  const r=track.getBoundingClientRect();
+  vid.currentTime=Math.max(0,Math.min(1,(e.touches[0].clientX-r.left)/r.width))*vid.duration;
+}
+function scrubTEnd(e){
+  if(!isFinite(vid.duration)||!e.changedTouches||!e.changedTouches[0])return;
+  const r=track.getBoundingClientRect();
+  vid.currentTime=Math.max(0,Math.min(1,(e.changedTouches[0].clientX-r.left)/r.width))*vid.duration;
+}
+
+function tapSide(side){
+  const now=Date.now();
+  if(now-lastTap<380&&lastTapSide===side){
+    const d=side==='left'?-10:10;
+    vid.currentTime=Math.max(0,Math.min(vid.duration||0,vid.currentTime+d));
+    if(activeHls){activeHls.stopLoad();activeHls.startLoad();}
+    seekAnim(d>0?'rgt':'lft',Math.abs(d));lastTap=0;
+    showCtrl();scheduleHide();
+  }else{
+    lastTap=now;lastTapSide=side;
+    controls.classList.contains('show')?hideCtrl():(showCtrl(),scheduleHide());
+  }
+}
+$('seek-left').addEventListener('click',()=>tapSide('left'));
+$('seek-right').addEventListener('click',()=>tapSide('right'));
+
+function seekAnim(side,secs){
+  seekInd.classList.remove('visible','lft','rgt');
+  void seekInd.offsetWidth; // force reflow so transition re-triggers
+  seekInd.classList.add(side==='rgt'?'rgt':'lft');
+  seekInd.innerHTML=(side==='rgt'?'▶▶':'◀◀')+`<br><span style="font-size:10px">${secs}s</span>`;
+  seekInd.classList.add('visible');
+  clearTimeout(seekInd._t);
+  seekInd._t=setTimeout(()=>seekInd.classList.remove('visible'),800);
+}
+
+document.addEventListener('keydown',e=>{
+  if(!playerScreen.classList.contains('show'))return;
+  if(e.key===' '){e.preventDefault();togglePlay();}
+  else if(e.key==='ArrowRight'){
+    vid.currentTime=Math.min(vid.currentTime+5,vid.duration||0);
+    if(activeHls){activeHls.stopLoad();activeHls.startLoad();}
+    seekAnim('rgt',5);
+  }
+  else if(e.key==='ArrowLeft'){
+    vid.currentTime=Math.max(0,vid.currentTime-5);
+    if(activeHls){activeHls.stopLoad();activeHls.startLoad();}
+    seekAnim('lft',5);
+  }
+});
+
+$('k-fs-btn').addEventListener('click',e=>{
+  e.stopPropagation();
+  if(!document.fullscreenElement)$('k-player').requestFullscreen?.();
+  else document.exitFullscreen?.();
+  keepCtrl();scheduleHide();
+});
+
+// When entering fullscreen, clear JS-set inline height so CSS takes over
+// When exiting, restore the calculated height
+document.addEventListener('fullscreenchange',()=>{
+  const kp=$('k-player');
+  if(document.fullscreenElement){
+    kp.style.height='';
+    vid.style.height='';
+  } else {
+    const vw=window.innerWidth;
+    kp.style.height=Math.round(vw*9/16)+'px';
+    vid.style.height=Math.round(vw*9/16)+'px';
+  }
+});
+
+qualBtn.addEventListener('click',e=>{
+  e.stopPropagation();
+  speedWrap.classList.remove('open');
+  const isOpen=qualWrap.classList.contains('open');
+  qualWrap.classList.toggle('open');
+  if(!isOpen){
+    const btnRect=qualBtn.getBoundingClientRect();
+    const itemCount=qualMenu.querySelectorAll('.kqo').length||6;
+    const menuH=itemCount*47+2; // each item ~47px tall
+    const spaceAbove=btnRect.top;
+    const spaceBelow=window.innerHeight-btnRect.bottom;
+    qualMenu.style.right=(window.innerWidth-btnRect.right)+'px';
+    if(spaceAbove>menuH+8||spaceAbove>spaceBelow){
+      qualMenu.style.bottom=(window.innerHeight-btnRect.top+8)+'px';
+      qualMenu.style.top='auto';
+    } else {
+      qualMenu.style.top=(btnRect.bottom+8)+'px';
+      qualMenu.style.bottom='auto';
+    }
+  }
+  keepCtrl();scheduleHide();
+});
+document.addEventListener('click',e=>{if(!qualWrap.contains(e.target))qualWrap.classList.remove('open');});
+
+// ── LOAD MORE ─────────────────────────────────────────────────────────────────
+$('load-more-btn').addEventListener('click',()=>{
+  const prevPage=currentPage;
+  currentPage++;
+  renderVodList(currentChannelSlug,currentChannelData,true);
+  const cards=$('vod-grid').querySelectorAll('.vod-card');
+  const firstNew=cards[(prevPage-1)*PAGE_SIZE];
+  if(firstNew)firstNew.scrollIntoView({behavior:'smooth',block:'start'});
+});
+
+// ── SPEED MENU ────────────────────────────────────────────────────────────────
+const SPEEDS=[0.5,0.75,1,1.25,1.5,2];
+function buildSpeedMenu(){
+  speedMenu.innerHTML='';
+  SPEEDS.forEach(s=>{
+    const b=document.createElement('button');
+    b.className='kso'+(s===1?' active':'');
+    b.textContent=s+'x';
+    b.onclick=e=>{
+      e.stopPropagation();
+      vid.playbackRate=s;
+      speedBtn.textContent=s+'x ▲';
+      speedMenu.querySelectorAll('.kso').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      speedWrap.classList.remove('open');
+      keepCtrl();scheduleHide();
+    };
+    speedMenu.appendChild(b);
+  });
+}
+buildSpeedMenu();
+
+speedBtn.addEventListener('click',e=>{
+  e.stopPropagation();
+  // close quality menu if open
+  qualWrap.classList.remove('open');
+  const isOpen=speedWrap.classList.contains('open');
+  speedWrap.classList.toggle('open');
+  if(!isOpen){
+    const btnRect=speedBtn.getBoundingClientRect();
+    const menuH=SPEEDS.length*47+2;
+    const spaceAbove=btnRect.top;
+    const spaceBelow=window.innerHeight-btnRect.bottom;
+    speedMenu.style.right=(window.innerWidth-btnRect.right)+'px';
+    if(spaceAbove>menuH+8||spaceAbove>spaceBelow){
+      speedMenu.style.bottom=(window.innerHeight-btnRect.top+8)+'px';
+      speedMenu.style.top='auto';
+    } else {
+      speedMenu.style.top=(btnRect.bottom+8)+'px';
+      speedMenu.style.bottom='auto';
+    }
+  }
+  keepCtrl();scheduleHide();
+});
+document.addEventListener('click',e=>{if(!speedWrap.contains(e.target))speedWrap.classList.remove('open');});
+
+function buildQualMenu(hls){
+  qualMenu.innerHTML='';
+  const add=(lvl,label,active)=>{
+    const b=document.createElement('button');
+    b.className='kqo'+(active?' active':'');b.textContent=label;
+    b.onclick=e=>{e.stopPropagation();hls.currentLevel=lvl;qualBtn.textContent=label+' ▲';
+      qualMenu.querySelectorAll('.kqo').forEach(x=>x.classList.remove('active'));b.classList.add('active');qualWrap.classList.remove('open');};
+    qualMenu.appendChild(b);
+  };
+  add(-1,'Auto',true);
+  hls.levels.map((l,i)=>({l,i})).sort((a,b)=>(b.l.height||0)-(a.l.height||0)).forEach(({l,i})=>add(i,`${l.height}p`,false));
+}
+
+function goBack(){
+  if(activeHls){activeHls.destroy();activeHls=null;}
+  currentResumeKey='';
+  vid.pause();
+  vid.src='';
+  vid.load(); // fully reset video element
+  controls.classList.remove('show');
+  playerHeader.style.opacity='0';
+  showScreen('home');
+  $('vod-section').style.display='none';
+  $('hist-wrap').style.display='';
+  renderHistory();
+}
+
+window.addEventListener('popstate',()=>{
+  if(playerScreen.classList.contains('show')||discScreen.classList.contains('show')){goBack();history.pushState(null,'',location.href);}
+});
+history.pushState(null,'',location.href);
+window.addEventListener('resize',()=>{
+  if(playerScreen.classList.contains('show')&&!document.fullscreenElement){
+    const vw=window.innerWidth;
+    $('k-player').style.height=Math.round(vw*9/16)+'px';
+    vid.style.height=Math.round(vw*9/16)+'px';
+  }
+});
+
+function playIco(){return'<svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M8 5v14l11-7z"/></svg>';}
+function pauseIco(){return'<svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';}
+
+renderHistory();
+$('ch-input').addEventListener('keydown',e=>{if(e.key==='Enter')searchChannel();});
+</script>
+</body>
+</html>
